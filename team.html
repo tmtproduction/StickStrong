@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>Team Portal — Structural Load 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;600;800&display=swap" rel="stylesheet">
+  <script src="api.js"></script>
+  <style>
+    :root { --bg: #0f172a; --card-bg: #1e293b; --primary: #3b82f6; --success: #10b981; --danger: #ef4444; --gold: #f59e0b; --text: #ffffff; }
+    body { background: var(--bg); color: var(--text); font-family: 'Kanit', sans-serif; padding: 15px; margin: 0; -webkit-tap-highlight-color: transparent; }
+    h1, h2, h3 { margin: 0 0 10px 0; font-weight: 800; }
+    input, select { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 12px; border: 2px solid #334155; background: #020617; color: white; font-size: 1.2rem; box-sizing: border-box; text-align: center; font-family: 'Kanit', sans-serif; }
+    button { width: 100%; padding: 15px; border-radius: 12px; border: none; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; text-transform: uppercase; font-family: 'Kanit', sans-serif; }
+    button:disabled { background: #475569 !important; color: #94a3b8 !important; cursor: not-allowed; }
+    .card { background: var(--card-bg); padding: 20px; border-radius: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+    .hidden { display: none !important; }
+    .status-box { flex: 1; background: #334155; padding: 10px; border-radius: 10px; text-align: center; }
+    .badge { padding: 8px 15px; border-radius: 50px; font-size: 0.8rem; font-weight: bold; display: block; text-align: center; margin-bottom: 15px; }
+    .bdg-open   { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid #059669; }
+    .bdg-closed { background: rgba(239,68,68,0.2);  color: #f87171; border: 1px solid #b91c1c; }
+    .eff-calc-box { background: #020617; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #334155; text-align: center; }
+    .eff-label { font-size: 0.8rem; color: #94a3b8; }
+    .eff-val   { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.95); z-index: 1000; padding: 20px; display: flex; flex-direction: column; justify-content: center; backdrop-filter: blur(5px); }
+    .final-call-box { background: #1e293b; padding: 20px; border-radius: 20px; border: 2px solid var(--gold); text-align: center; }
+    @keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } 70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } }
+    .urgent { animation: pulse-red 2s infinite; }
+    .final-stats { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; }
+    .stat-item { flex: 1; display: flex; flex-direction: column; align-items: center; }
+    .stat-head { font-size: 0.7rem; color: #aaa; text-transform: uppercase; }
+    .stat-num  { font-size: 1.8rem; font-weight: bold; line-height: 1.2; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger  { background: var(--danger);  color: white; }
+    .btn-purple  { background: #8b5cf6; color: white; }
+    .card-used { background: #1e293b !important; color: #475569 !important; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="loginSection">
+    <div style="margin-bottom: 20px; text-align: center;">
+      <div style="font-size: 3rem;">🏗️</div>
+      <h1 style="color: var(--primary);">TEAM LOGIN</h1>
+      <p style="color: #94a3b8;">Enter your passcode to join</p>
+    </div>
+    <input type="password" id="passcode" placeholder="Passcode">
+    <button id="btnLogin" class="btn-primary" onclick="login()">ENTER SYSTEM</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboardSection" class="hidden">
+
+    <div class="card">
+      <h2 id="teamNameDisplay" style="text-align: center; color: white;">Team Name</h2>
+      <div style="display: flex; gap: 10px;">
+        <div class="status-box">
+          <div style="font-size: 0.7rem; color: #94a3b8;">ROUND</div>
+          <div id="dispRound" style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">-</div>
+        </div>
+        <div class="status-box">
+          <div style="font-size: 0.7rem; color: #94a3b8;">QUEUE</div>
+          <div id="dispQueue" style="font-size: 1.5rem; font-weight: bold; color: var(--gold);">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BID -->
+    <div class="card">
+      <h3>💰 Submit Bid</h3>
+      <div id="bidStatusBadge" class="badge bdg-closed">LOADING...</div>
+      <select id="roundSelect">
+        <option value="2">Round 2</option>
+        <option value="3">Round 3</option>
+        <option value="4">Round 4</option>
+        <option value="5">Round 5</option>
+      </select>
+
+      <div style="background: #000; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: center; border: 1px dashed #666;">
+        <div style="font-size: 0.8rem; color: #aaa;">RISING BAR (MINIMUM)</div>
+        <div id="risingVal" style="font-size: 1.8rem; color: var(--danger); font-weight: bold;">0</div>
+      </div>
+
+      <div class="eff-calc-box">
+        <div style="display: flex; justify-content: space-around;">
+          <div><div class="eff-label">MY STRUCTURE (g)</div><div id="mySW" style="color: white; font-weight: bold;">0</div></div>
+          <div><div class="eff-label">PREDICTED EFF</div><div id="calcEff" class="eff-val">0.00</div></div>
+        </div>
+      </div>
+
+      <input type="number" id="bidWeight" placeholder="Weight (g)" inputmode="numeric" oninput="calculateLiveEff()">
+      <button id="btnSubmitBid" onclick="submitBid()" disabled>WAITING...</button>
+    </div>
+
+    <!-- POWER CARDS -->
+    <div class="card" style="border: 1px solid #8b5cf6;">
+      <h3 style="color: #a78bfa;">⚡ Power Cards (1 Use/Team)</h3>
+      <button id="btn_SHIELD" onclick="useCard('SHIELD')" class="btn-primary"  style="margin-bottom: 10px;">🛡️ SHIELD</button>
+      <button id="btn_ATTACK" onclick="useCard('ATTACK')" class="btn-danger"   style="margin-bottom: 10px;">💣 ATTACK</button>
+      <button id="btn_TIME"   onclick="useCard('TIME')"   style="background: var(--gold); color: black;">⏳ TIME</button>
+    </div>
+
+  </div>
+
+  <!-- FINAL CALL OVERLAY -->
+  <div id="finalCallOverlay" class="overlay hidden">
+    <div class="final-call-box urgent">
+      <h1 style="color: var(--gold); font-size: 2rem; margin-bottom: 5px;">🔔 FINAL CALL</h1>
+      <p style="color: #ccc; margin-bottom: 20px;">It's your turn! Enter the weight.</p>
+
+      <div class="final-stats">
+        <div class="stat-item">
+          <div class="stat-head">RISING</div>
+          <div id="fcRising" class="stat-num" style="color: var(--danger);">0</div>
+        </div>
+        <div class="stat-item" style="border-left: 1px solid #555; border-right: 1px solid #555;">
+          <div class="stat-head">YOUR BID</div>
+          <div id="fcBid" class="stat-num" style="color: var(--gold);">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-head">MIN REQ</div>
+          <div id="fcMin" class="stat-num" style="color: var(--success);">0</div>
+        </div>
+      </div>
+
+      <input type="number" id="finalWeightInput" placeholder="Enter Final Weight (g)"
+             style="font-size: 2rem; border-color: var(--gold); color: var(--gold);">
+      <button onclick="submitFinalWeight()" class="btn-success"
+              style="font-size: 1.3rem; padding: 20px; margin-top: 15px;">CONFIRM LOAD</button>
+    </div>
+  </div>
+
+  <script>
+    // ── State ────────────────────────────────────────────────────────────────
+    let authToken = '', myTeamName = '', myStrucWeight = 0, myCurrentScore = 0;
+    let myBidVal = 0, roundMaxVal = 0, currentServerRound = '1';
+    let pollInterval = null;
+
+    function nf(val) {
+      if (val === null || val === undefined || val === '' || isNaN(parseFloat(val))) return val;
+      return parseFloat(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    }
+
+    // ── Login ────────────────────────────────────────────────────────────────
+    async function login() {
+      const p   = document.getElementById('passcode').value;
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true;
+      btn.innerText = 'CONNECTING...';
+
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).teamLogin(p)
+        const res = await API.teamLogin(p);
+        if (res.success) {
+          authToken      = res.token;
+          myTeamName     = res.name;
+          myStrucWeight  = parseFloat(res.sw) || 0;
+          myCurrentScore = parseFloat(res.score) || 0;
+
+          document.getElementById('mySW').innerText          = myStrucWeight;
+          document.getElementById('loginSection').classList.add('hidden');
+          document.getElementById('dashboardSection').classList.remove('hidden');
+          document.getElementById('teamNameDisplay').innerText = myTeamName;
+
+          // โหลด card status
+          // เดิม: google.script.run.withSuccessHandler(c => { ... }).getMyCards(authToken)
+          const c = await API.getMyCards(authToken);
+          if (c.shieldUsed) disableCard('SHIELD');
+          if (c.attackUsed) disableCard('ATTACK');
+          if (c.timeUsed)   disableCard('TIME');
+
+          // เริ่ม polling
+          checkStatus();
+          pollInterval = setInterval(checkStatus, 3000);
+
+        } else {
+          alert(res.msg || 'Wrong passcode');
+          btn.disabled = false;
+          btn.innerText = 'ENTER SYSTEM';
+        }
+      } catch (err) {
+        alert('Connection error. Please try again.');
+        btn.disabled = false;
+        btn.innerText = 'ENTER SYSTEM';
+      }
+    }
+
+    // ── Live Efficiency Calculator ────────────────────────────────────────────
+    function calculateLiveEff() {
+      const bid = parseFloat(document.getElementById('bidWeight').value) || 0;
+      const totalScore = myCurrentScore + bid;
+      if (myStrucWeight > 0) {
+        document.getElementById('calcEff').innerText = (totalScore / myStrucWeight).toFixed(2);
+      }
+    }
+
+    // ── Polling (checkStatus) ────────────────────────────────────────────────
+    async function checkStatus() {
+      try {
+        // เดิม: google.script.run.withSuccessHandler(s => { ... }).getSystemState()
+        const s = await API.getSystemState();
+        currentServerRound = s.currentRound;
+        roundMaxVal        = parseFloat(s.roundMax) || 0;
+
+        // แสดง Round
+        document.getElementById('dispRound').innerText =
+          (s.currentRound === 'WEIGH-IN') ? 'WEIGH' : s.currentRound;
+        document.getElementById('risingVal').innerText = nf(roundMaxVal);
+
+        // อัพเดต Bid button
+        const selectedRound = document.getElementById('roundSelect').value;
+        const bg  = document.getElementById('bidStatusBadge');
+        const btn = document.getElementById('btnSubmitBid');
+        if (s.currentRound === selectedRound && s.bidStatus === 'OPEN') {
+          bg.className  = 'badge bdg-open';
+          bg.innerText  = '🟢 OPEN';
+          btn.disabled  = false;
+          btn.innerText = '🚀 SUBMIT';
+          btn.style.background = 'var(--primary)';
+        } else {
+          bg.className  = 'badge bdg-closed';
+          bg.innerText  = '🔴 CLOSED';
+          btn.disabled  = true;
+          btn.innerText = '⛔ LOCKED';
+          btn.style.background = '#475569';
+        }
+
+        // เช็ค Final Call
+        if (String(s.reqWeightTeamId) !== '') {
+          // เดิม: google.script.run.withSuccessHandler(res => { ... }).getLeaderboardData()
+          const res = await API.getLeaderboardData();
+          const me  = res.data.find(t => t.name === myTeamName);
+
+          if (me) {
+            // อัพ queue position
+            const active = res.data.filter(t => t.status === 'Active');
+            const idx    = active.findIndex(t => t.name === myTeamName);
+            document.getElementById('dispQueue').innerText = (idx !== -1) ? `#${idx + 1}` : '-';
+
+            // เช็คว่าเป็น Final Call ของทีมเราหรือเปล่า
+            if (String(s.reqWeightTeamId) === String(me.id)) {
+              const bid    = parseFloat(me.bids['r' + s.currentRound]) || 0;
+              myBidVal     = bid;
+              const minReq = Math.max(roundMaxVal, bid);
+
+              document.getElementById('fcRising').innerText = nf(roundMaxVal);
+              document.getElementById('fcBid').innerText    = nf(bid);
+              document.getElementById('fcMin').innerText    = nf(minReq);
+              document.getElementById('finalCallOverlay').classList.remove('hidden');
+            } else {
+              document.getElementById('finalCallOverlay').classList.add('hidden');
+            }
+          }
+        } else {
+          document.getElementById('finalCallOverlay').classList.add('hidden');
+        }
+
+      } catch (err) {
+        console.warn('[checkStatus]', err);
+      }
+    }
+
+    // ── Submit Bid ────────────────────────────────────────────────────────────
+    async function submitBid() {
+      const r = document.getElementById('roundSelect').value;
+      const w = parseFloat(document.getElementById('bidWeight').value);
+      if (isNaN(w) || w <= 0) return alert('Invalid weight');
+      if (parseInt(r) >= 2 && w < roundMaxVal) return alert(`Must be >= Rising Bar (${nf(roundMaxVal)})`);
+      if (!confirm(`Bid ${nf(w)}g for Round ${r}?`)) return;
+
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).submitBid(authToken, r, w)
+        const res = await API.submitBid(authToken, r, w);
+        alert(res.success ? '✅ Bid submitted!' : res.msg);
+      } catch (err) {
+        alert('Connection error');
+      }
+    }
+
+    // ── Submit Final Weight ───────────────────────────────────────────────────
+    async function submitFinalWeight() {
+      const v = parseFloat(document.getElementById('finalWeightInput').value);
+      if (isNaN(v)) return alert('Invalid weight');
+      const minReq = Math.max(roundMaxVal, myBidVal);
+      if (v < minReq) return alert(`Must be >= ${nf(minReq)}g`);
+      if (!confirm(`CONFIRM: ${nf(v)}g?`)) return;
+
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).teamSubmitFinal(authToken, v)
+        const res = await API.teamSubmitFinal(authToken, v);
+        if (res.success) {
+          document.getElementById('finalCallOverlay').classList.add('hidden');
+          alert('Done! Weight submitted.');
+        }
+      } catch (err) {
+        alert('Connection error');
+      }
+    }
+
+    // ── Power Cards ───────────────────────────────────────────────────────────
+    async function useCard(type) {
+      if (!confirm(`Activate ${type}?`)) return;
+
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).useCard(authToken, type)
+        const res = await API.useCard(authToken, type);
+        alert(res.msg);
+        if (res.success) disableCard(type);
+      } catch (err) {
+        alert('Connection error');
+      }
+    }
+
+    function disableCard(type) {
+      const btn = document.getElementById('btn_' + type);
+      if (!btn) return;
+      btn.disabled          = true;
+      btn.style.background  = '#1e293b';
+      btn.style.color       = '#475569';
+      btn.innerText         = '✓ USED';
+    }
+  </script>
+</body>
+</html>
