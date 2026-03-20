@@ -20,7 +20,7 @@ const API = (() => {
   // ─── ตั้งค่า URL ของ GAS Web App ───────────────────────────────────────────
   // หลัง Deploy GAS เป็น Web App แล้ว ให้เอา URL มาใส่ที่นี่
   // รูปแบบ: https://script.google.com/macros/s/XXXXXXXXXX/exec
-  const GAS_URL = 'https://script.google.com/macros/s/REPLACE_WITH_YOUR_DEPLOYMENT_ID/exec';
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzUY6hANtHKMgOByV4Ji2AadeXlvzqr8w9Ioh5K_kyQF5ZCEeN0SU7mW_BrekX35Q/exec';
 
   /**
    * ฟังก์ชันหลัก — ส่ง POST request ไป GAS
