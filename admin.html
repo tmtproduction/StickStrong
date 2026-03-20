@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Control — Structural Load 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/digital-7-mono" rel="stylesheet">
+  <script src="api.js"></script>
+  <style>
+    :root { --bg-dark: #0f172a; --card-bg: #1e293b; --primary: #3b82f6; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --text: #f8fafc; --border: #334155; }
+    body { font-family: 'Kanit', sans-serif; padding: 15px; background: var(--bg-dark); color: var(--text); max-width: 700px; margin: 0 auto; }
+    h1, h2, h3 { margin: 0 0 10px 0; font-weight: 800; }
+    .panel { background: var(--card-bg); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
+    label { font-size: 0.8rem; font-weight: bold; color: #94a3b8; letter-spacing: 1px; margin-bottom: 5px; display: block; }
+    input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: white; font-size: 1.1rem; box-sizing: border-box; margin-bottom: 15px; font-family: 'Kanit'; }
+    button { cursor: pointer; border: none; font-family: 'Kanit'; font-weight: 800; font-size: 1rem; border-radius: 8px; transition: 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-blue   { background: var(--primary); color: white; width: 100%; padding: 12px; }
+    .btn-green  { background: var(--success); color: white; width: 100%; padding: 15px; font-size: 1.3rem; }
+    .btn-red    { background: var(--danger);  color: white; width: 100%; padding: 15px; font-size: 1.3rem; }
+    .btn-yellow { background: var(--warning); color: #000;  width: 100%; padding: 12px; }
+    .btn-gray   { background: #475569; color: white; padding: 10px; width: 100%; }
+    .timer-box  { background: #000; color: var(--warning); font-family: 'Digital-7 Mono'; font-size: 3.5rem; text-align: center; padding: 10px; border-radius: 8px; min-width: 140px; border: 2px solid #333; line-height: 1; }
+    .bid-ctl-group { display: flex; gap: 10px; margin-top: 5px; }
+    .btn-open  { flex: 1; padding: 12px; background: rgba(16,185,129,0.1); color: var(--success); border: 2px solid var(--success); border-radius: 8px; }
+    .btn-close { flex: 1; padding: 12px; background: rgba(239,68,68,0.1);  color: var(--danger);  border: 2px solid var(--danger);  border-radius: 8px; }
+    .btn-open.active  { background: var(--success); color: white; }
+    .btn-close.active { background: var(--danger);  color: white; }
+    .queue-container { max-height: 300px; overflow-y: auto; background: #0b1120; border-radius: 8px; border: 1px solid var(--border); }
+    .queue-item { padding: 12px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+    .queue-item:hover { background: #1e293b; }
+    .queue-item.selected { background: #1e3a8a; border-left: 4px solid var(--primary); }
+    .hidden { display: none !important; }
+    .loading-bar { position: fixed; top: 0; left: 0; width: 0; height: 4px; background: var(--warning); z-index: 999; transition: width 0.3s; }
+    .loading-bar.active { width: 70%; }
+    .loading-bar.done   { width: 100%; opacity: 0; transition: width 0.2s, opacity 0.3s 0.2s; }
+    @keyframes blink { 50% { opacity: 0.2; } }
+    .blink-warn { animation: blink 1s infinite; color: var(--danger); font-weight: bold; }
+    .card-alert { background: rgba(239,68,68,0.15); border: 2px dashed var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+
+  <div id="loader" class="loading-bar"></div>
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <h2>👮 ADMIN CONTROL</h2>
+    <div style="font-size: 0.8rem; color: #94a3b8;">
+      Status: <span id="connStatus" style="color: var(--success);">Connected</span>
+    </div>
+  </div>
+
+  <!-- ROUND CONTROL -->
+  <div class="panel">
+    <label>COMPETITION ROUND</label>
+    <select id="roundSet" onchange="updateRound()">
+      <option value="0">🏗️ Weigh-in: Structure Weight</option>
+      <option value="1">Round 1 (Free Weight)</option>
+      <option value="2">Round 2 (Bid)</option>
+      <option value="3">Round 3 (Bid)</option>
+      <option value="4">Round 4 (Bid)</option>
+      <option value="5">Round 5 (Bid)</option>
+    </select>
+
+    <div id="bidControls" class="hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label>BIDDING STATUS: <span id="bidStatusText" style="color: var(--danger);">CLOSED</span></label>
+        <div id="bidCounter" style="background: var(--primary); color: white; padding: 2px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;">0 / 0</div>
+      </div>
+      <div class="bid-ctl-group">
+        <button id="btnOpen"  class="btn-open"        onclick="setBid(true)">🟢 OPEN BIDS</button>
+        <button id="btnClose" class="btn-close active" onclick="setBid(false)">🔴 CLOSE BIDS</button>
+      </div>
+      <button id="btnReveal" onclick="toggleReveal()"
+              style="margin-top: 10px; background: #334155; color: #94a3b8; width: 100%; padding: 10px; border: 1px solid #475569; border-radius: 8px;">
+        👁️ REVEAL BIDS ON SCREEN
+      </button>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+      <button class="btn-gray" onclick="generateQueue()" style="flex: 1;">🔄 REFRESH</button>
+      <button id="btnShowQ"   class="btn-gray" onclick="toggleQueueDisplay()" style="background: #8b5cf6; flex: 1;">📢 SHOW QUEUE ON SCREEN</button>
+    </div>
+  </div>
+
+  <!-- QUEUE -->
+  <div class="panel">
+    <h3 style="display: flex; justify-content: space-between;">
+      <span>📋 Queue / Participants</span>
+      <button onclick="clearRisingBar()"
+              style="background: var(--danger); color: white; padding: 4px 8px; font-size: 0.7rem; width: auto; border-radius: 4px;">
+        ⚠️ RESET BAR
+      </button>
+    </h3>
+    <div id="queueList" class="queue-container">
+      <div style="padding: 20px; text-align: center; color: #64748b;">Loading Teams...</div>
+    </div>
+  </div>
+
+  <!-- INTERFERENCE MONITOR -->
+  <div class="panel" style="border: 1px solid #a855f7;">
+    <h3 style="color: #a855f7; display: flex; justify-content: space-between;">
+      <span>⚡ INTERFERENCE MONITOR (AUTO)</span>
+      <span style="font-size: 0.8rem; color: #ccc;">10k coins = 1 block</span>
+    </h3>
+    <div style="display: flex; gap: 15px;">
+      <div style="flex: 1; background: rgba(0,243,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
+        <label style="color: var(--primary);">SUPPORT (-500g)</label>
+        <div style="font-size: 2rem; font-weight: bold; color: white;"><span id="admSupUsed">0</span> / 10</div>
+        <div style="font-size: 0.8rem; color: #94a3b8;">BLOCKS</div>
+      </div>
+      <div style="flex: 1; background: rgba(168,85,247,0.1); padding: 10px; border-radius: 8px; text-align: center;">
+        <label style="color: #a855f7;">CHAOS (+500g)</label>
+        <div style="font-size: 2rem; font-weight: bold; color: white;"><span id="admChaosUsed">0</span> / 10</div>
+        <div style="font-size: 0.8rem; color: #94a3b8;">BLOCKS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVE TEAM -->
+  <div class="panel" style="border: 2px solid var(--primary); position: relative;">
+    <div style="position: absolute; top: -12px; left: 15px; background: var(--primary); padding: 2px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8rem;">
+      ACTIVE TEAM
+    </div>
+    <h2 id="activeTeamName" style="color: white; margin: 15px 0; font-size: 1.8rem;">No Team Selected</h2>
+
+    <div id="cardActionPanel" class="hidden card-alert">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label style="color: var(--danger); margin: 0;">🚨 POWER CARD ACTIVATED</label>
+        <button onclick="resetCards()"
+                style="background: var(--danger); color: white; font-size: 0.7rem; padding: 4px 10px; width: auto; margin: 0; border-radius: 4px;">
+          🔄 CLEAR
+        </button>
+      </div>
+      <div id="cardStatusDisplay" style="font-size: 1.2rem; margin-top: 5px; color: white; font-weight: bold;">Normal</div>
+    </div>
+
+    <!-- Weigh-in panel -->
+    <div id="swPanel" class="hidden" style="background: #0f172a; padding: 15px; border-radius: 8px;">
+      <label>🏗️ STRUCTURE WEIGHT (g):</label>
+      <input type="number" id="strucWeightInput" placeholder="e.g. 50">
+      <button class="btn-blue" onclick="saveStrucWt()">💾 SAVE STRUCTURE WEIGHT</button>
+    </div>
+
+    <!-- Competition panel -->
+    <div id="compPanel">
+      <div style="background: rgba(249,115,22,0.1); border: 1px solid #f97316; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+        <label style="color: #fdba74;">STEP 1: REQUEST FINAL WEIGHT FROM TEAM</label>
+        <button class="btn-yellow" onclick="callTeamForWeight()">🔔 PUSH FINAL CALL TO TEAM MOBILE</button>
+      </div>
+
+      <label>STEP 2: NET WEIGHT (FINAL)</label>
+      <div id="weightBreakdown" style="text-align: center; font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px;">Base: 0g | Extra: 0g</div>
+      <input type="number" id="judgeWeight" placeholder="Waiting for team / Type manually"
+             style="font-size: 2rem; text-align: center; color: var(--primary); font-weight: bold;">
+      <button class="btn-blue" onclick="broadcast()" style="background: #0ea5e9; margin-bottom: 15px;">📢 BROADCAST WEIGHT TO SCREEN</button>
+
+      <label style="margin-top: 20px;">STEP 3: JUDGE RESULT</label>
+      <div style="display: flex; justify-content: space-between; gap: 15px;">
+        <button class="btn-green" onclick="judge(true)">✅ PASS</button>
+        <button class="btn-red"   onclick="judge(false)">❌ FAIL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMER -->
+  <div class="panel">
+    <label>⏱️ TIMER CONTROL</label>
+    <div id="timeReqAlert" class="blink-warn hidden" style="text-align: center; margin-bottom: 10px; font-size: 1.2rem;">
+      ⚠️ TEAM REQUESTED +15s TIME!
+    </div>
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <div id="adminTimerDisplay" class="timer-box">00:00</div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
+        <input type="number" id="timerSetVal" value="60" style="margin: 0; text-align: center; font-weight: bold;">
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-green" style="padding: 10px; font-size: 1rem;" onclick="timerAction('START')">▶ START</button>
+          <button class="btn-red"   style="padding: 10px; font-size: 1rem;" onclick="timerAction('STOP')">⏹ STOP</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AWARD -->
+  <div class="panel" style="border-color: #ffd700;">
+    <label>🏆 AWARD CEREMONY</label>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-yellow" onclick="toggleSummary(true)">✨ SHOW CHAMPIONS</button>
+      <button class="btn-gray"   onclick="toggleSummary(false)">❌ HIDE</button>
+    </div>
+  </div>
+
+  <script>
+    // ── State ─────────────────────────────────────────────────────────────────
+    let queue = [], currentRound = '1', selectedTeamId = '';
+    let timerEnd = 0, timerStatus = 'STOPPED';
+    let isQueueOnScreen = false, isRevealed = false;
+    let currentBaseBid = 0, lastExtraWeight = 0, lastCallWeight = '', lastShieldState = false;
+
+    function nf(val, dec = 0) {
+      if (val === null || val === undefined || val === '' || isNaN(parseFloat(val))) return val;
+      return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    }
+
+    // ── Access Control ────────────────────────────────────────────────────────
+    window.onload = function () {
+      const p = prompt('ACCESS KEY:');
+      if (p !== 'ADMIN2026') {
+        document.body.innerHTML = "<h1 style='color:red;text-align:center;margin-top:50px;'>⛔ ACCESS DENIED</h1>";
+        return;
+      }
+      init();
+    };
+
+    function init() {
+      syncState();
+      setInterval(syncState, 2500);
+      timerLoop();
+    }
+
+    // ── Loading Bar ───────────────────────────────────────────────────────────
+    function showLoad(show) {
+      const el = document.getElementById('loader');
+      if (show) { el.className = 'loading-bar active'; }
+      else      { el.className = 'loading-bar done'; setTimeout(() => el.className = 'loading-bar', 500); }
+    }
+
+    // ── Sync State ────────────────────────────────────────────────────────────
+    async function syncState() {
+      try {
+        // เดิม: google.script.run.withSuccessHandler(s => { ... }).getSystemState()
+        const s = await API.getSystemState();
+        if (!s) return;
+
+        document.getElementById('connStatus').innerText = 'Connected';
+        document.getElementById('connStatus').style.color = 'var(--success)';
+
+        timerStatus = s.timerStatus;
+        if (s.timerStatus === 'RUNNING') timerEnd = parseInt(s.timerEnd);
+
+        updateBidUI(s.bidStatus);
+        if (parseInt(s.currentRound) >= 2) {
+          document.getElementById('bidCounter').innerText = `Bids: ${s.bidCount} / ${s.activeTeamCount}`;
+        }
+
+        // Queue on screen button
+        isQueueOnScreen = (s.queueVisible === 'true');
+        const btnQ = document.getElementById('btnShowQ');
+        if (isQueueOnScreen) {
+          btnQ.innerText         = '❌ HIDE QUEUE FROM SCREEN';
+          btnQ.style.background  = 'var(--danger)';
+        } else {
+          btnQ.innerText         = '📢 SHOW QUEUE ON SCREEN';
+          btnQ.style.background  = '#8b5cf6';
+        }
+
+        // Power card status
+        const cardPanel   = document.getElementById('cardActionPanel');
+        const statusDiv   = document.getElementById('cardStatusDisplay');
+        const extra       = parseInt(s.extraWeight || 0);
+        const isShield    = (s.isShielded === 'true');
+        const txt         = [];
+        if (isShield) txt.push('🛡️ SHIELD ACTIVE (Immune)');
+        if (extra !== 0 && !isShield) {
+          const sign  = extra > 0 ? '+' : '';
+          const color = extra > 0 ? 'var(--danger)' : 'var(--primary)';
+          txt.push(`<span style="color:${color}">⚖️ EXTRA: ${sign}${nf(extra)}g</span>`);
+        }
+        if (s.timeAdded > 0) txt.push(`⏳ TIME +${s.timeAdded}s`);
+
+        if (txt.length > 0) {
+          cardPanel.classList.remove('hidden');
+          statusDiv.innerHTML        = txt.join(' | ');
+          cardPanel.style.borderColor = (extra > 0 && !isShield) ? 'var(--danger)' : 'var(--primary)';
+        } else {
+          cardPanel.classList.add('hidden');
+        }
+
+        // Time request alert
+        const timeAlert = document.getElementById('timeReqAlert');
+        if (s.timeAdded > 0) {
+          timeAlert.classList.remove('hidden');
+          timeAlert.innerText = `⚠️ TEAM REQUESTED +${s.timeAdded}s TIME!`;
+        } else {
+          timeAlert.classList.add('hidden');
+        }
+
+        // Judge weight auto-fill
+        const inputEl  = document.getElementById('judgeWeight');
+        const isFocused = (document.activeElement === inputEl);
+        let baseVal = 0;
+        if (s.currentCallWeight !== 'READY' && s.currentCallWeight !== '0') {
+          baseVal = parseInt(s.currentCallWeight);
+        } else if (currentBaseBid > 0) {
+          baseVal = currentBaseBid;
+        }
+
+        let bdHtml = `Base: ${nf(baseVal)}g`;
+        if (extra !== 0) bdHtml += ` | Extra: <span style="color:${extra > 0 ? 'var(--danger)' : 'var(--success)'}">${extra > 0 ? '+' : ''}${nf(extra)}g</span>`;
+        if (isShield)    bdHtml += ` <span style="color:var(--primary)">(Shielded)</span>`;
+        document.getElementById('weightBreakdown').innerHTML = bdHtml;
+
+        if (!isFocused) {
+          let shouldUpdate = false;
+          if (s.currentCallWeight !== 'READY' && s.currentCallWeight !== '0' && s.currentCallWeight !== lastCallWeight) {
+            shouldUpdate = true; lastCallWeight = s.currentCallWeight;
+          }
+          if (extra !== lastExtraWeight || isShield !== lastShieldState) {
+            shouldUpdate = true; lastExtraWeight = extra; lastShieldState = isShield;
+          }
+          if (shouldUpdate) {
+            const finalW = isShield ? baseVal : (baseVal + extra);
+            if (baseVal > 0 || extra !== 0) inputEl.value = finalW;
+          }
+        }
+
+        // Bid reveal button
+        isRevealed = (s.bidsRevealed === 'true');
+        const btnR = document.getElementById('btnReveal');
+        if (isRevealed) {
+          btnR.innerText         = '🐵 HIDE BIDS';
+          btnR.style.background  = 'var(--warning)';
+          btnR.style.color       = 'black';
+        } else {
+          btnR.innerText         = '👁️ REVEAL BIDS';
+          btnR.style.background  = '#334155';
+          btnR.style.color       = '#94a3b8';
+        }
+
+        // Interference blocks
+        document.getElementById('admSupUsed').innerText   = s.blocksUsedSupport;
+        document.getElementById('admChaosUsed').innerText = s.blocksUsedChaos;
+
+      } catch (err) {
+        document.getElementById('connStatus').innerText    = 'Disconnected';
+        document.getElementById('connStatus').style.color  = 'var(--danger)';
+        console.warn('[syncState]', err);
+      }
+    }
+
+    // ── Round Control ─────────────────────────────────────────────────────────
+    async function updateRound() {
+      currentRound       = document.getElementById('roundSet').value;
+      const isBidRound   = (parseInt(currentRound) >= 2);
+      document.getElementById('bidControls').classList.toggle('hidden', !isBidRound);
+
+      if (currentRound === '0') {
+        document.getElementById('swPanel').classList.remove('hidden');
+        document.getElementById('compPanel').classList.add('hidden');
+      } else {
+        document.getElementById('swPanel').classList.add('hidden');
+        document.getElementById('compPanel').classList.remove('hidden');
+      }
+
+      showLoad(true);
+      const serverRound = (currentRound === '0') ? 'WEIGH-IN' : currentRound;
+
+      try {
+        // เดิม: google.script.run chain setSystemState → setSystemState → generateQueue
+        await API.setSystemState('round', serverRound);
+        await API.setSystemState('currentCallWeight', 'READY');
+        selectedTeamId = '';
+        document.getElementById('activeTeamName').innerText = 'No Team Selected';
+        await generateQueue();
+      } catch (err) {
+        console.error('[updateRound]', err);
+      }
+      showLoad(false);
+    }
+
+    // ── Queue ─────────────────────────────────────────────────────────────────
+    async function generateQueue(autoSelectNext = false) {
+      showLoad(true);
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).getLeaderboardData()
+        const res = await API.getLeaderboardData();
+        if (!res.success) { showLoad(false); return; }
+
+        const activeTeams = res.data.filter(t => t.status === 'Active');
+        let pendingTeams  = activeTeams;
+
+        if (currentRound !== '0') {
+          const roundIdx = parseInt(currentRound) - 1;
+          pendingTeams   = activeTeams.filter(t => {
+            const result = t.rounds[roundIdx];
+            return result === '' || result === undefined || result === null;
+          });
+        }
+
+        if (currentRound === '0' || currentRound === '1') {
+          queue = pendingTeams.sort((a, b) => a.order - b.order);
+        } else {
+          queue = pendingTeams.sort((a, b) => {
+            const bidA = parseFloat(a.bids['r' + currentRound]) || 0;
+            const bidB = parseFloat(b.bids['r' + currentRound]) || 0;
+            if (bidA === 0 && bidB > 0) return 1;
+            if (bidB === 0 && bidA > 0) return -1;
+            if (bidA !== bidB) return bidA - bidB;
+            return b.score - a.score;
+          });
+        }
+
+        renderQueue();
+        if (autoSelectNext && queue.length > 0) selectTeam(0);
+      } catch (err) {
+        console.error('[generateQueue]', err);
+      }
+      showLoad(false);
+    }
+
+    function renderQueue() {
+      let html = '';
+      if (queue.length === 0) {
+        html = '<div style="padding:20px; text-align:center;">All Teams Completed!</div>';
+      } else {
+        queue.forEach((t, i) => {
+          const isSel  = (String(t.id) === String(selectedTeamId)) ? 'selected' : '';
+          const swTxt  = t.strucWeight ? `(SW: ${nf(t.strucWeight)})` : '';
+          let info = '';
+          if (currentRound === '0') {
+            info = `<span style="color:var(--primary);">${swTxt || 'No SW'}</span>`;
+          } else {
+            const bidVal = t.bids['r' + currentRound];
+            const bidTxt = (parseInt(currentRound) >= 2) ? `Bid: ${nf(bidVal)}` : 'Free Wt';
+            info = `${bidTxt} | Total: ${nf(t.score)} ${swTxt}`;
+          }
+          html += `<div class="queue-item ${isSel}" onclick="selectTeam(${i})">
+            <div>
+              <div style="font-weight:bold; font-size:1.1rem;">${i + 1}. ${t.name}</div>
+              <div style="font-size:0.85rem; color:#94a3b8;">${info}</div>
+            </div>
+            <button class="btn-gray" style="width:auto; padding:5px 15px; font-size:0.8rem;">SELECT</button>
+          </div>`;
+        });
+      }
+      document.getElementById('queueList').innerHTML = html;
+    }
+
+    async function selectTeam(index) {
+      const t = queue[index];
+      if (!t) return;
+      selectedTeamId = t.id;
+      document.getElementById('activeTeamName').innerText = t.name;
+
+      const bidWt    = t.bids['r' + currentRound] || 0;
+      currentBaseBid = (currentRound === '0') ? 0 : (parseFloat(bidWt) || 0);
+      lastCallWeight = '';
+
+      if (currentRound === '0') {
+        document.getElementById('strucWeightInput').value = t.strucWeight || '';
+      } else {
+        document.getElementById('judgeWeight').value = (currentBaseBid > 0) ? currentBaseBid : '';
+      }
+
+      renderQueue();
+      // เดิม: google.script.run.setSystemState('activeTeamId', t.id)
+      await API.setSystemState('activeTeamId', t.id);
+    }
+
+    // ── Judge Actions ─────────────────────────────────────────────────────────
+    async function saveStrucWt() {
+      const w = document.getElementById('strucWeightInput').value;
+      if (!selectedTeamId || !w) return alert('Select team and enter weight!');
+      showLoad(true);
+      try {
+        // เดิม: google.script.run.withSuccessHandler(...).saveStructureWeight(selectedTeamId, w)
+        await API.saveStructureWeight(selectedTeamId, w);
+        alert('Structure Weight Saved!');
+        await generateQueue();
+      } catch (err) { alert('Error saving'); }
+      showLoad(false);
+    }
+
+    async function callTeamForWeight() {
+      if (!selectedTeamId) return alert('Select a team first!');
+      if (!confirm('Ping TEAM MOBILE for Final Weight Confirmation?')) return;
+      // เดิม: google.script.run.triggerWeightCall(selectedTeamId)
+      await API.triggerWeightCall(selectedTeamId);
+      alert('Request Sent!');
+    }
+
+    async function broadcast() {
+      const net   = parseInt(document.getElementById('judgeWeight').value);
+      if (isNaN(net)) return alert('Enter Net Weight');
+      const base  = lastShieldState ? net : (net - lastExtraWeight);
+      // เดิม: google.script.run.setSystemState('currentCallWeight', base)
+      await API.setSystemState('currentCallWeight', base);
+    }
+
+    async function judge(isPass) {
+      if (!selectedTeamId) return alert('Select a team first!');
+      const w = document.getElementById('judgeWeight').value;
+      if (!w) return alert('Enter weight');
+      if (!confirm(`Confirm Result: ${isPass ? 'PASS' : 'FAIL'} for ${nf(w)}g?`)) return;
+
+      showLoad(true);
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).saveResult(...)
+        const res = await API.saveResult(selectedTeamId, currentRound, w, isPass);
+        if (res === true || res.success !== false) {
+          alert('✅ Result Saved & Payout Processed!');
+          document.getElementById('judgeWeight').value = '';
+          lastExtraWeight = 0; lastCallWeight = '';
+          document.getElementById('activeTeamName').innerText = 'Processing Next...';
+          await generateQueue(true);
+        } else {
+          alert('❌ ERROR: Team not found!');
+        }
+      } catch (err) { alert('Error saving result'); }
+      showLoad(false);
+    }
+
+    // ── Bid Control ───────────────────────────────────────────────────────────
+    async function setBid(isOpen) {
+      showLoad(true);
+      const status = isOpen ? 'OPEN' : 'CLOSED';
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).setBidStatus(currentRound, status)
+        const res = await API.setBidStatus(currentRound, status);
+        updateBidUI(res);
+      } catch (err) { console.error('[setBid]', err); }
+      showLoad(false);
+    }
+
+    function updateBidUI(status) {
+      document.getElementById('bidStatusText').innerText    = status;
+      document.getElementById('bidStatusText').style.color  = (status === 'OPEN') ? 'var(--success)' : 'var(--danger)';
+      document.getElementById('btnOpen').classList.toggle('active',  status === 'OPEN');
+      document.getElementById('btnClose').classList.toggle('active', status !== 'OPEN');
+    }
+
+    async function toggleReveal() {
+      const newState = !isRevealed;
+      // เดิม: google.script.run.setBidReveal(newState)
+      await API.setBidReveal(newState);
+    }
+
+    async function toggleQueueDisplay() {
+      const newState = !isQueueOnScreen;
+      // เดิม: google.script.run.withSuccessHandler(()=>syncState()).setQueueVisibility(newState)
+      await API.setQueueVisibility(newState);
+      await syncState();
+    }
+
+    async function clearRisingBar() {
+      if (!confirm('Reset Rising Bar?')) return;
+      showLoad(true);
+      try {
+        await API.setSystemState('round', currentRound === '0' ? 'WEIGH-IN' : currentRound);
+        await generateQueue();
+      } catch (err) { console.error('[clearRisingBar]', err); }
+      showLoad(false);
+    }
+
+    // ── Cards & Summary ───────────────────────────────────────────────────────
+    async function resetCards() {
+      if (!confirm('Clear all card effects?')) return;
+      // เดิม: google.script.run.adminResetCards()
+      await API.adminResetCards();
+    }
+
+    async function toggleSummary(show) {
+      showLoad(true);
+      // เดิม: google.script.run.withSuccessHandler(()=>showLoad(false)).triggerChampionSummary/closeSummary()
+      if (show) await API.triggerChampionSummary();
+      else      await API.closeSummary();
+      showLoad(false);
+    }
+
+    // ── Timer ─────────────────────────────────────────────────────────────────
+    async function timerAction(act) {
+      const val = parseInt(document.getElementById('timerSetVal').value);
+      // เดิม: google.script.run.setTimerState(act==='START'?'RUNNING':'STOPPED', val)
+      await API.setTimerState(act === 'START' ? 'RUNNING' : 'STOPPED', val);
+    }
+
+    function timerLoop() {
+      if (timerStatus === 'RUNNING') {
+        const rem = Math.max(0, Math.ceil((timerEnd - Date.now()) / 1000));
+        document.getElementById('adminTimerDisplay').innerText =
+          String(Math.floor(rem / 60)).padStart(2, '0') + ':' + String(rem % 60).padStart(2, '0');
+      }
+      requestAnimationFrame(timerLoop);
+    }
+  </script>
+</body>
+</html>
