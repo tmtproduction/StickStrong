@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>ORACLE 2026 — Spectator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;600;800&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- โหลด api.js ก่อน script อื่น -->
+  <script src="api.js"></script>
+  <style>
+    :root { --bg: #020617; --card: #1e293b; --primary: #00f3ff; --accent: #ff00ff; --gold: #ffd700; --green: #10b981; --red: #ef4444; --border: #334155; }
+    body { background: var(--bg); color: white; font-family: 'Kanit', sans-serif; margin: 0; padding: 15px; -webkit-tap-highlight-color: transparent; }
+    .hidden { display: none !important; }
+    .login-container { height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+    .logo { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--primary); text-shadow: 0 0 15px var(--primary); margin-bottom: 5px; }
+    input[type="text"], input[type="number"] { background: #0f172a; border: 2px solid var(--border); border-radius: 12px; color: white; padding: 15px; font-size: 1.1rem; text-align: center; font-family: 'Kanit'; }
+    .btn-main { background: linear-gradient(90deg, var(--primary), #2563eb); border: none; border-radius: 12px; color: #000; padding: 15px; font-weight: 800; font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+    .btn-main:active { transform: scale(0.98); }
+    .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .coins-box { background: rgba(255, 215, 0, 0.1); border: 1px solid var(--gold); padding: 5px 12px; border-radius: 50px; color: var(--gold); font-weight: bold; font-size: 1.1rem; }
+    .active-team-card { background: var(--card); border-radius: 16px; padding: 15px; text-align: center; border: 1px solid var(--border); margin-bottom: 20px; }
+    .team-name { font-size: 1.8rem; font-weight: 800; margin: 5px 0; color: #fff; }
+    .bet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+    .bet-btn { padding: 20px 10px; border-radius: 12px; border: 2px solid transparent; color: white; font-weight: 800; font-size: 1.2rem; cursor: pointer; opacity: 0.6; background: transparent; }
+    .bet-pass { border-color: var(--green); color: var(--green); }
+    .bet-fail { border-color: var(--red); color: var(--red); }
+    .bet-btn.selected { opacity: 1; transform: scale(1.05); box-shadow: 0 0 15px currentColor; }
+    .payload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+    .btn-support { background: rgba(0, 243, 255, 0.1); border: 2px solid var(--primary); color: var(--primary); padding: 20px 10px; border-radius: 12px; cursor: pointer; font-weight: 800; }
+    .btn-chaos { background: rgba(168, 85, 247, 0.1); border: 2px solid #a855f7; color: #a855f7; padding: 20px 10px; border-radius: 12px; cursor: pointer; font-weight: 800; }
+    .amount-input-group { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+    .amount-presets { display: flex; justify-content: center; gap: 8px; }
+    .preset { background: #334155; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; border: 1px solid transparent; }
+    .preset:hover { border-color: var(--primary); }
+    .tab-bar { display: flex; margin-bottom: 15px; background: #1e293b; border-radius: 10px; padding: 5px; }
+    .tab-btn { flex: 1; padding: 10px; background: transparent; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; font-family: 'Kanit'; }
+    .tab-btn.active { background: #334155; color: white; border-radius: 8px; }
+    .txn-item { background: #1e293b; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #555; }
+    .est-return { color: var(--gold); font-size: 1.4rem; text-align: center; margin-top: 15px; font-weight: 800; background: rgba(251, 191, 36, 0.1); border: 1px dashed var(--gold); padding: 10px; border-radius: 8px; }
+    .loading-text { text-align: center; padding: 20px; color: #666; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="loginSection" class="login-container">
+    <div class="logo">ORACLE 2026</div>
+    <div style="font-size: 0.8rem; color: #aaa; margin-bottom: 20px;">ACCESS CONTROL</div>
+    <input type="text" id="idInput" placeholder="YOUR ID NUMBER" inputmode="numeric"
+           style="width: 250px; margin-bottom: 10px; letter-spacing: 2px; font-weight: bold;">
+    <input type="text" id="nickInput" placeholder="NICKNAME" maxlength="10"
+           style="width: 250px; margin-bottom: 20px;">
+    <button class="btn-main" id="btnLogin" onclick="doLogin()" style="width: 280px;">INITIALIZE</button>
+  </div>
+
+  <!-- MAIN -->
+  <div id="mainSection" class="hidden">
+    <div class="header">
+      <div style="display: flex; flex-direction: column;">
+        <span id="userName" style="font-size: 0.85rem; color: #94a3b8;">PLAYER</span>
+        <div class="coins-box"><span id="userCoins">0</span> 🪙</div>
+      </div>
+      <div style="text-align: right;">
+        <div id="roundDisp" style="color: var(--primary); font-weight: 800; font-size: 1.1rem; font-family: 'Orbitron';">ROUND 1</div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button onclick="switchTab('bet')"     id="tabBtn-bet"     class="tab-btn active">🔮 PREDICT</button>
+      <button onclick="switchTab('payload')" id="tabBtn-payload" class="tab-btn">⚡ PAYLOAD</button>
+      <button onclick="switchTab('history')" id="tabBtn-history" class="tab-btn">📜 HISTORY</button>
+    </div>
+
+    <!-- TAB: BET -->
+    <div id="tab-bet">
+      <div class="active-team-card">
+        <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">NOW COMPETING</div>
+        <div id="activeTeamName" class="team-name">WAITING...</div>
+      </div>
+      <div id="bettingZone">
+        <div class="bet-grid">
+          <button id="btnPASS" class="bet-btn bet-pass" onclick="selectPrediction('PASS')">PASS</button>
+          <button id="btnFAIL" class="bet-btn bet-fail" onclick="selectPrediction('FAIL')">FAIL</button>
+        </div>
+        <div class="amount-input-group">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label>BET AMOUNT</label>
+            <div class="amount-presets">
+              <div class="preset" onclick="setAmount('betAmount', 100)">100</div>
+              <div class="preset" onclick="setAmount('betAmount', 500)">500</div>
+              <div class="preset" onclick="setAmount('betAmount', 'ALL')">ALL</div>
+            </div>
+          </div>
+          <input type="number" id="betAmount" value="100" inputmode="numeric" oninput="calcReturn()">
+          <div id="estReturn" class="est-return">Est. Return: 0 🪙</div>
+        </div>
+        <button id="btnConfirmBet" class="btn-main" onclick="confirmBet()" style="width: 100%; margin-top: 15px;">CONFIRM</button>
+      </div>
+    </div>
+
+    <!-- TAB: PAYLOAD -->
+    <div id="tab-payload" class="hidden">
+      <div class="active-team-card">
+        <div style="color: #aaa;">CROWDFUNDING PROTOCOL</div>
+        <div style="font-size: 0.8rem; margin-top: 5px;">10,000 Coins = 1 Block (+/- 500g)</div>
+      </div>
+      <div class="payload-grid">
+        <div style="text-align: center;">
+          <div style="color: var(--primary); font-weight: bold; margin-bottom: 5px;">SUPPORT (-WT)</div>
+          <button class="btn-support" onclick="fundPayload('SUPPORT')">🛡️ FUND</button>
+        </div>
+        <div style="text-align: center;">
+          <div style="color: #a855f7; font-weight: bold; margin-bottom: 5px;">CHAOS (+WT)</div>
+          <button class="btn-chaos" onclick="fundPayload('CHAOS')">💣 FUND</button>
+        </div>
+      </div>
+      <div class="amount-input-group">
+        <label>FUNDING AMOUNT</label>
+        <div class="amount-presets">
+          <div class="preset" onclick="setAmount('payloadAmount', 1000)">1k</div>
+          <div class="preset" onclick="setAmount('payloadAmount', 5000)">5k</div>
+          <div class="preset" onclick="setAmount('payloadAmount', 10000)">10k</div>
+        </div>
+        <input type="number" id="payloadAmount" value="1000">
+      </div>
+    </div>
+
+    <!-- TAB: HISTORY -->
+    <div id="tab-history" class="hidden">
+      <div id="txnList" style="max-height: 60vh; overflow-y: auto; font-size: 0.9rem;">
+        <div class="loading-text">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ───────────────────────────────────────────────────────────────
+    let userData = {}, currentActiveTeamId = '', hasBetted = false;
+    let selectedPrediction = '', liveOdds = { passMul: 1.80, failMul: 1.80 };
+
+    function nf(val) { return parseFloat(val).toLocaleString(); }
+
+    // ── Login ───────────────────────────────────────────────────────────────
+    async function doLogin() {
+      const id   = document.getElementById('idInput').value.trim();
+      const nick = document.getElementById('nickInput').value.trim();
+      if (!id || !nick) return alert('Please fill ID and Nickname');
+
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true;
+      btn.innerText = 'CONNECTING...';
+
+      try {
+        // เดิม: google.script.run.withSuccessHandler(...).spectatorLogin(id, nick)
+        const res = await API.spectatorLogin(id, nick);
+        if (res.success) {
+          userData = res;
+          document.getElementById('loginSection').classList.add('hidden');
+          document.getElementById('mainSection').classList.remove('hidden');
+          updateUI();
+          initSystem();
+        } else {
+          alert('Login failed');
+          btn.disabled = false;
+          btn.innerText = 'INITIALIZE';
+        }
+      } catch (err) {
+        alert('Connection error. Check API URL in api.js');
+        btn.disabled = false;
+        btn.innerText = 'INITIALIZE';
+      }
+    }
+
+    // ── Tab ─────────────────────────────────────────────────────────────────
+    function switchTab(t) {
+      ['bet', 'payload', 'history'].forEach(x => {
+        document.getElementById('tab-' + x).classList.add('hidden');
+        document.getElementById('tabBtn-' + x).classList.remove('active');
+      });
+      document.getElementById('tab-' + t).classList.remove('hidden');
+      document.getElementById('tabBtn-' + t).classList.add('active');
+      if (t === 'history') loadHistory();
+    }
+
+    // ── Polling ─────────────────────────────────────────────────────────────
+    function initSystem() {
+      syncState();
+      setInterval(syncState, 3000);
+    }
+
+    async function syncState() {
+      try {
+        // เดิม: google.script.run.withSuccessHandler(s => { ... }).getSystemState()
+        const s = await API.getSystemState();
+        if (!s) return;
+
+        document.getElementById('roundDisp').innerText = 'ROUND ' + s.currentRound;
+
+        if (String(s.activeTeamId) !== String(currentActiveTeamId)) {
+          currentActiveTeamId = s.activeTeamId;
+          resetBetUI();
+          if (currentActiveTeamId) {
+            updateActiveTeamName(s.activeTeamId);
+            getOdds();
+          } else {
+            document.getElementById('activeTeamName').innerText = 'WAITING...';
+          }
+        } else if (currentActiveTeamId) {
+          getOdds();
+        }
+
+        // อัพเดต balance
+        const bal = await API.getUserBalance(userData.userId);
+        userData.coins = bal;
+        updateUI();
+
+      } catch (err) {
+        console.warn('[syncState]', err);
+      }
+    }
+
+    async function getOdds() {
+      if (!currentActiveTeamId) return;
+      try {
+        // เดิม: google.script.run.withSuccessHandler(o => { liveOdds = o; }).getLiveOdds(teamId)
+        liveOdds = await API.getLiveOdds(currentActiveTeamId);
+        calcReturn();
+      } catch (err) {
+        console.warn('[getOdds]', err);
+      }
+    }
+
+    async function updateActiveTeamName(id) {
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).getLeaderboardData()
+        const res = await API.getLeaderboardData();
+        if (!res.success) return;
+        const team = res.data.find(t => String(t.id) === String(id));
+        if (team) document.getElementById('activeTeamName').innerText = team.name;
+      } catch (err) {
+        console.warn('[updateActiveTeamName]', err);
+      }
+    }
+
+    // ── Bet ──────────────────────────────────────────────────────────────────
+    function selectPrediction(p) {
+      if (hasBetted) return;
+      selectedPrediction = p;
+      document.getElementById('btnPASS').classList.toggle('selected', p === 'PASS');
+      document.getElementById('btnFAIL').classList.toggle('selected', p === 'FAIL');
+      calcReturn();
+    }
+
+    function calcReturn() {
+      const amt = parseFloat(document.getElementById('betAmount').value) || 0;
+      const mul = selectedPrediction === 'PASS' ? liveOdds.passMul :
+                  selectedPrediction === 'FAIL' ? liveOdds.failMul : 0;
+      const ret = Math.floor(amt * mul);
+      document.getElementById('estReturn').innerText = `Est. Return: ${nf(ret)} 🪙 (x${mul})`;
+    }
+
+    function setAmount(id, a) {
+      document.getElementById(id).value = (a === 'ALL') ? userData.coins : a;
+      if (id === 'betAmount') calcReturn();
+    }
+
+    async function confirmBet() {
+      if (!selectedPrediction || !currentActiveTeamId || hasBetted) return alert('Check selection');
+      const amt = parseInt(document.getElementById('betAmount').value);
+      if (amt > userData.coins) return alert('Insufficient coins');
+
+      const btn = document.getElementById('btnConfirmBet');
+      btn.disabled = true;
+
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).placeBet(...)
+        const res = await API.placeBet(userData.userId, currentActiveTeamId, selectedPrediction, amt);
+        if (res.success) {
+          hasBetted = true;
+          userData.coins = res.newBalance;
+          updateUI();
+          alert('Bet Placed!');
+        } else {
+          alert(res.msg || 'Error placing bet');
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('Connection error');
+        btn.disabled = false;
+      }
+    }
+
+    // ── Payload ──────────────────────────────────────────────────────────────
+    async function fundPayload(side) {
+      const amt = parseInt(document.getElementById('payloadAmount').value);
+      if (amt > userData.coins) return alert('Not enough coins');
+      if (!confirm(`Fund ${side} with ${nf(amt)}?`)) return;
+
+      try {
+        // เดิม: google.script.run.withSuccessHandler(res => { ... }).investPayload(...)
+        const res = await API.investPayload(userData.userId, side, amt);
+        if (res.success) {
+          alert('Funded Successfully!');
+          userData.coins = res.newBalance;
+          updateUI();
+        } else {
+          alert(res.msg || 'Error');
+        }
+      } catch (err) {
+        alert('Connection error');
+      }
+    }
+
+    // ── History ──────────────────────────────────────────────────────────────
+    async function loadHistory() {
+      document.getElementById('txnList').innerHTML = '<div class="loading-text">Loading...</div>';
+      try {
+        // เดิม: google.script.run.withSuccessHandler(list => { ... }).getMyTransactions(userId)
+        const list = await API.getMyTransactions(userData.userId);
+        let html = '';
+        list.forEach(tx => {
+          const color = tx.amount > 0 ? 'var(--green)' : 'var(--red)';
+          const icon  = tx.amount > 0 ? '📥' : '📤';
+          html += `<div class="txn-item" style="border-left-color: ${color}">
+            <div>
+              <div style="font-weight: bold;">${tx.type}</div>
+              <div style="font-size: 0.75rem; color: #888;">${tx.detail}</div>
+            </div>
+            <div style="font-weight: bold; color: ${color}; text-align: right;">
+              ${icon} ${nf(Math.abs(tx.amount))}
+            </div>
+          </div>`;
+        });
+        document.getElementById('txnList').innerHTML =
+          html || '<div class="loading-text">No transactions yet</div>';
+      } catch (err) {
+        document.getElementById('txnList').innerHTML = '<div class="loading-text" style="color:var(--red)">Load failed</div>';
+      }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function resetBetUI() {
+      selectedPrediction = '';
+      hasBetted = false;
+      document.getElementById('btnConfirmBet').disabled = false;
+      document.getElementById('btnPASS').classList.remove('selected');
+      document.getElementById('btnFAIL').classList.remove('selected');
+      document.getElementById('estReturn').innerText = 'Est. Return: 0 🪙';
+    }
+
+    function updateUI() {
+      const idVal = document.getElementById('idInput').value;
+      document.getElementById('userName').innerText = `${userData.nickname} (ID:${idVal})`;
+      document.getElementById('userCoins').innerText = nf(userData.coins);
+    }
+  </script>
+</body>
+</html>
