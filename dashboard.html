@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STRUCTURAL LOAD — LIVE MONITOR</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="api.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;500;700&family=Chakra+Petch:wght@400;700;900&display=swap');
+    @import url('https://fonts.cdnfonts.com/css/digital-7-mono');
+
+    :root {
+      --bg-deep: #020617; --panel-bg: #0f172a; --border: #334155;
+      --accent-blue: #3b82f6; --accent-gold: #fbbf24; --accent-red: #ef4444; --accent-green: #10b981;
+      --text-main: #f1f5f9; --text-muted: #94a3b8;
+    }
+    body { background: var(--bg-deep); color: var(--text-main); margin: 0; overflow: hidden; font-family: 'Kanit', sans-serif; background-image: radial-gradient(circle at top right, #1e293b 0%, #020617 60%); }
+    .digital { font-family: 'Digital-7 Mono', monospace; text-shadow: 0 0 10px currentColor; }
+    .scifi-font { font-family: 'Chakra Petch', sans-serif; text-transform: uppercase; }
+    .hidden { display: none !important; }
+    .container { display: grid; grid-template-rows: 90px 1fr; height: 100vh; padding: 15px; gap: 15px; box-sizing: border-box; }
+
+    .header { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; position: relative; overflow: hidden; }
+    .header::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--accent-blue), transparent); }
+    .h-title { font-size: 1.8rem; font-weight: 800; letter-spacing: 2px; color: white; display: flex; align-items: center; gap: 15px; font-family: 'Chakra Petch'; }
+    .h-round-badge { background: rgba(59,130,246,0.2); color: #fff; padding: 5px 30px; border-radius: 6px; font-size: 2rem; font-weight: 900; border: 2px solid var(--accent-blue); box-shadow: 0 0 15px var(--accent-blue); letter-spacing: 2px; font-family: 'Chakra Petch'; }
+    .h-timer { font-size: 4rem; color: var(--text-main); line-height: 1; }
+
+    .content-grid { display: grid; grid-template-columns: 35% 1fr; gap: 15px; height: 100%; overflow: hidden; }
+
+    .stage-card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; position: relative; }
+    .team-display { position: relative; height: 28vh; width: 100%; border-radius: 8px; overflow: hidden; border: 2px solid #475569; margin-bottom: 15px; background: #000; transition: 0.3s; }
+    .team-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+    .team-name-overlay { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 20px 10px 10px; text-align: center; }
+    .team-name-text { font-size: 1.8rem; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Chakra Petch'; }
+
+    @keyframes pulse-shield { 0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.7); border-color: #60a5fa; } 70% { box-shadow: 0 0 20px 10px rgba(59,130,246,0); } 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); } }
+    @keyframes shake-attack { 0%,100% { transform: translate(1px,1px); } 25% { transform: translate(-2px,1px); } 50% { transform: translate(2px,-1px); } 75% { transform: translate(-1px,2px); } }
+    .effect-shield { animation: pulse-shield 2s infinite; border: 4px solid var(--accent-blue) !important; }
+    .effect-shield::before { content: '🛡️ SHIELD ACTIVE'; position: absolute; top: 10px; right: 10px; background: var(--accent-blue); color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold; z-index: 10; font-family: 'Chakra Petch'; }
+    .effect-attack { animation: shake-attack 0.5s infinite; border: 4px solid var(--accent-red) !important; }
+
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .stat-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; padding: 8px; text-align: center; }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 1px; font-weight: bold; font-family: 'Chakra Petch'; }
+    .stat-val { font-size: 1.8rem; line-height: 1.2; font-weight: bold; }
+
+    .bottom-stats { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+    .oracle-group { display: flex; flex-direction: column; gap: 4px; }
+    .oracle-track { height: 18px; background: var(--accent-red); border-radius: 4px; overflow: hidden; position: relative; border: 1px solid #555; display: flex; }
+    .oracle-fill { height: 100%; background: var(--accent-green); width: 50%; transition: width 0.5s; }
+    .oracle-info { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: bold; color: white; align-items: flex-end; font-family: 'Chakra Petch'; }
+    .oracle-center { font-size: 1.1rem; color: var(--accent-gold); font-family: 'Chakra Petch'; }
+
+    .block-group { display: flex; flex-direction: column; gap: 4px; }
+    .block-container { display: flex; gap: 4px; height: 15px; }
+    .block-item { flex: 1; background: #1e293b; border: 1px solid #475569; border-radius: 2px; transition: 0.3s; }
+    .block-item.sup-active   { background: var(--accent-blue); border-color: #60a5fa; }
+    .block-item.chaos-active { background: #a855f7; border-color: #c084fc; }
+    .bar-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); font-weight: bold; font-family: 'Chakra Petch'; }
+
+    .load-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-top: 1px solid var(--border); margin-top: 5px; position: relative; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 0; }
+    .load-label { color: var(--text-muted); letter-spacing: 2px; font-size: 0.9rem; margin-bottom: 5px; font-family: 'Chakra Petch'; }
+    .load-value { font-size: 5.5rem; line-height: 0.9; font-weight: normal; color: #475569; transition: 0.3s; }
+    .load-value.active { color: var(--text-main); }
+    .target-eff { font-size: 1.4rem; color: var(--accent-blue); margin-top: 5px; opacity: 0; }
+    .load-details { display: flex; gap: 10px; margin-top: 5px; height: 25px; }
+    .badge-attack { color: var(--accent-red); background: rgba(239,68,68,0.1); border: 1px solid var(--accent-red); padding: 2px 8px; border-radius: 4px; font-size: 0.9rem; font-weight: bold; animation: blink 1s infinite; font-family: 'Chakra Petch'; }
+    .badge-time { color: var(--accent-gold); background: rgba(251,191,36,0.1); border: 1px solid var(--accent-gold); padding: 2px 8px; border-radius: 4px; font-size: 0.9rem; font-weight: bold; font-family: 'Chakra Petch'; }
+    @keyframes blink { 50% { opacity: 0.5; } }
+
+    .matrix-card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 12px; padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-family: 'Chakra Petch'; }
+    thead { background: #1e293b; color: var(--accent-blue); font-size: 0.9rem; letter-spacing: 1px; }
+    th { padding: 12px 5px; text-align: center; font-weight: bold; border-bottom: 2px solid var(--border); }
+    th:nth-child(2) { text-align: left; padding-left: 15px; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s; height: 50px; }
+    td { text-align: center; font-size: 1.1rem; color: #cbd5e1; }
+    td:nth-child(2) { text-align: left; padding-left: 15px; font-weight: bold; color: white; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+    tr.active-row { background: rgba(59,130,246,0.15); border-left: 4px solid var(--accent-blue); }
+    tr.active-row td { color: white; }
+    .col-highlight { background: rgba(255,255,255,0.04); }
+    .res-pass { color: var(--accent-green); font-weight: bold; }
+    .res-fail { color: var(--accent-red); font-weight: bold; }
+    .res-bid  { color: var(--accent-gold); }
+    .bid-waiting { color: rgba(255,255,255,0.3); font-size: 0.9rem; }
+    .bid-done { background: rgba(251,191,36,0.2); color: var(--accent-gold); border-radius: 4px; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(5px); }
+    .overlay.show { opacity: 1; pointer-events: auto; }
+    .q-panel { background: #0f172a; width: 500px; border-radius: 12px; overflow: hidden; border: 2px solid var(--accent-gold); }
+    .q-header { background: var(--accent-gold); color: black; padding: 15px; text-align: center; font-family: 'Chakra Petch'; font-weight: 900; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
+    .q-body { max-height: 60vh; overflow-y: auto; padding: 10px; }
+    .q-item { padding: 15px 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem; background: rgba(255,255,255,0.03); margin-bottom: 5px; border-radius: 5px; }
+    .q-bid-box { font-family: 'Digital-7 Mono'; font-size: 1.5rem; color: var(--accent-gold); font-weight: bold; }
+    .res-box { text-align: center; transform: scale(0.8); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .overlay.show .res-box { transform: scale(1); }
+    .res-title { font-family: 'Chakra Petch'; font-size: 8rem; font-weight: 900; line-height: 1; margin: 0; }
+    .res-val   { font-family: 'Digital-7 Mono'; font-size: 4rem; color: white; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="h-title">
+        <i class="fas fa-cube" style="color: var(--accent-blue)"></i>
+        <span>STRUCTURAL LOAD <span style="font-weight: 300; opacity: 0.7;">2026</span></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div id="roundDisp" class="h-round-badge scifi-font">ROUND 1</div>
+        <div id="timerDisp" class="h-timer digital">00:00</div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <!-- LEFT -->
+      <div class="stage-card">
+        <div id="teamBox" class="team-display">
+          <img id="activeImg" class="team-img" src="https://via.placeholder.com/600x400?text=WAITING">
+          <div class="team-name-overlay">
+            <div id="activeName" class="team-name-text">WAITING FOR TEAM</div>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">RISING BAR</div>
+            <div id="valRising" class="stat-val digital" style="color: var(--accent-red);">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">TEAM BID</div>
+            <div id="valBid" class="stat-val digital" style="color: var(--accent-gold);">-</div>
+          </div>
+        </div>
+
+        <div class="bottom-stats">
+          <div class="oracle-group">
+            <div class="oracle-info">
+              <span style="color: var(--accent-red)">FAIL: <span id="failTotalTxt">0</span></span>
+              <span id="oracleTotal" class="oracle-center">TOTAL: 0</span>
+              <span style="color: var(--accent-green)">PASS: <span id="passTotalTxt">0</span></span>
+            </div>
+            <div class="oracle-track"><div id="oracleBar" class="oracle-fill" style="width: 50%;"></div></div>
+          </div>
+
+          <div class="block-group">
+            <div class="bar-label">
+              <span style="color: var(--accent-blue)">SUPPORT (-500g)</span>
+              <span id="supFundTxt" style="color: white; opacity: 0.7;">0 Coins</span>
+            </div>
+            <div id="supBlocksContainer" class="block-container"></div>
+          </div>
+          <div class="block-group">
+            <div class="bar-label">
+              <span style="color: #a855f7">CHAOS (+500g)</span>
+              <span id="chaosFundTxt" style="color: white; opacity: 0.7;">0 Coins</span>
+            </div>
+            <div id="chaosBlocksContainer" class="block-container"></div>
+          </div>
+        </div>
+
+        <div id="loadBox" class="load-box">
+          <div class="load-label scifi-font">NET LOAD (FINAL)</div>
+          <div id="mainLoad" class="load-value digital">READY</div>
+          <div id="loadDetails" class="load-details"></div>
+          <div id="targetEff" class="target-eff digital">TARGET EFF: 0.00</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: LEADERBOARD -->
+      <div class="matrix-card">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>TEAM</th>
+              <th style="width: 80px;">SW</th>
+              <th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>R5</th>
+              <th style="width: 100px;">EFF</th>
+              <th style="width: 80px;">TOT</th>
+            </tr>
+          </thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Queue Overlay -->
+  <div id="queueOverlay" class="overlay">
+    <div class="q-panel">
+      <div class="q-header">NEXT QUEUE & BIDS</div>
+      <div id="queueContent" class="q-body"></div>
+    </div>
+  </div>
+
+  <!-- Result Overlay -->
+  <div id="resOverlay" class="overlay" style="z-index: 200;">
+    <div class="res-box">
+      <div id="resTxt" class="res-title">PASS</div>
+      <div id="resSub" class="res-val">2,500 g</div>
+    </div>
+  </div>
+
+  <script>
+    function nf(val, decimals = 0) {
+      if (val === null || val === undefined || val === '' || isNaN(parseFloat(val))) return val;
+      return parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    let state = { round: '1', activeTeamId: '' };
+    let lastLoad = 0, lastResId = 0, isFirstLoad = true;
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    function init() {
+      renderBlockContainers();
+      sync();
+      setInterval(sync, 2500);
+      timerLoop();
+    }
+
+    function renderBlockContainers() {
+      ['supBlocksContainer', 'chaosBlocksContainer'].forEach(id => {
+        let html = '';
+        for (let i = 0; i < 10; i++) html += `<div class="block-item" id="${id}_${i}"></div>`;
+        document.getElementById(id).innerHTML = html;
+      });
+    }
+
+    // ── Main Sync ─────────────────────────────────────────────────────────────
+    async function sync() {
+      try {
+        // เดิม: google.script.run.withSuccessHandler(s => { ... }).getSystemState()
+        const s = await API.getSystemState();
+        if (!s) return;
+        state = s;
+
+        // Round display
+        document.getElementById('roundDisp').innerText =
+          (s.currentRound === 'WEIGH-IN') ? 'WEIGH' : 'ROUND ' + s.currentRound;
+        document.getElementById('valRising').innerText = nf(s.roundMax);
+
+        // Net load calculation
+        const baseLoad = (s.currentCallWeight !== 'READY') ? (parseInt(s.currentCallWeight) || 0) : 0;
+        const extra    = parseInt(s.extraWeight || 0);
+        const isShield = (s.isShielded === 'true');
+        const netLoad  = isShield ? baseLoad : (baseLoad + extra);
+
+        if (s.currentCallWeight === 'READY') {
+          document.getElementById('mainLoad').innerText = 'READY';
+          document.getElementById('mainLoad').classList.remove('active');
+        } else {
+          if (netLoad !== lastLoad) { animateValue('mainLoad', lastLoad, netLoad, 500); lastLoad = netLoad; }
+          document.getElementById('mainLoad').classList.add('active');
+        }
+
+        // Payload blocks
+        const fundedSup   = Math.floor(s.fundSupport / 10000);
+        const fundedChaos = Math.floor(s.fundChaos / 10000);
+        for (let i = 0; i < 10; i++) {
+          document.getElementById(`supBlocksContainer_${i}`).classList.toggle('sup-active',   i < fundedSup);
+          document.getElementById(`chaosBlocksContainer_${i}`).classList.toggle('chaos-active', i < fundedChaos);
+        }
+        document.getElementById('supFundTxt').innerText   = `${nf(s.fundSupport)} (${fundedSup}/10)`;
+        document.getElementById('chaosFundTxt').innerText = `${nf(s.fundChaos)} (${fundedChaos}/10)`;
+
+        // No active team
+        if (!s.activeTeamId) {
+          document.getElementById('activeImg').src      = 'https://via.placeholder.com/600x400?text=NEXT+TEAM';
+          document.getElementById('activeName').innerText = 'WAITING FOR NEXT TEAM...';
+          document.getElementById('targetEff').style.opacity = 0;
+          document.getElementById('valBid').innerText    = '-';
+        }
+
+        // Card effects on team display
+        const tBox   = document.getElementById('teamBox');
+        const detBox = document.getElementById('loadDetails');
+        tBox.classList.remove('effect-shield', 'effect-attack');
+        detBox.innerHTML = '';
+        if (isShield) {
+          tBox.classList.add('effect-shield');
+          detBox.innerHTML += `<div class="badge-attack" style="background:var(--accent-blue);color:white;border:none;">🛡️ SHIELD</div>`;
+        } else if (extra !== 0) {
+          const sign = extra > 0 ? '+' : '';
+          detBox.innerHTML += `<div class="badge-attack">${sign}${nf(extra)}g</div>`;
+          if (extra > 0) tBox.classList.add('effect-attack');
+        }
+        if (s.timeAdded > 0) detBox.innerHTML += `<div class="badge-time">+${s.timeAdded}s</div>`;
+
+        // Queue overlay
+        document.getElementById('queueOverlay').classList.toggle('show', s.queueVisible === 'true');
+
+        // Result popup — ป้องกัน popup ตอนโหลดหน้าครั้งแรก
+        const curId = parseInt(s.lastResultId) || 0;
+        if (isFirstLoad) { lastResId = curId; isFirstLoad = false; }
+        else if (curId > lastResId) { lastResId = curId; showResult(s.lastResult, s.lastJudgedWeight); }
+
+        // Load leaderboard + oracle พร้อมกัน
+        // เดิม: google.script.run.withSuccessHandler(d => renderMatrix(d, s)).getLeaderboardData()
+        const [leaderboard] = await Promise.all([
+          API.getLeaderboardData(),
+          s.activeTeamId ? updateOracle(s.activeTeamId) : Promise.resolve()
+        ]);
+        renderMatrix(leaderboard, s);
+
+      } catch (err) {
+        console.warn('[sync]', err);
+      }
+    }
+
+    // ── Oracle (Bet Stats) ────────────────────────────────────────────────────
+    async function updateOracle(tid) {
+      try {
+        // เดิม: google.script.run.withSuccessHandler(o => { ... }).getActiveBetStats(tid)
+        const o          = await API.getActiveBetStats(tid);
+        const total      = (o.passCount || 0) + (o.failCount || 0);
+        const pct        = total > 0 ? (o.passCount / total * 100) : 50;
+        const totalCoins = (o.passTotal || 0) + (o.failTotal || 0);
+        document.getElementById('oracleBar').style.width     = pct + '%';
+        document.getElementById('failTotalTxt').innerText    = nf(o.failTotal);
+        document.getElementById('passTotalTxt').innerText    = nf(o.passTotal);
+        document.getElementById('oracleTotal').innerText     = 'TOTAL: ' + nf(totalCoins);
+      } catch (err) {
+        console.warn('[updateOracle]', err);
+      }
+    }
+
+    // ── Render Leaderboard Matrix ─────────────────────────────────────────────
+    function renderMatrix(res, s) {
+      if (!res.success) return;
+      const teams    = res.data;
+      const currentR = parseInt(s.currentRound);
+
+      // Sort by efficiency (descending)
+      teams.sort((a, b) => (parseFloat(b.efficiency) || 0) - (parseFloat(a.efficiency) || 0));
+
+      let html = '', qHtml = '';
+
+      // Queue list for overlay
+      const queueList = [...teams].filter(t => t.status === 'Active');
+      if (currentR >= 2) {
+        queueList.sort((a, b) => {
+          const bidA = parseFloat(a.bids['r' + currentR]) || 0;
+          const bidB = parseFloat(b.bids['r' + currentR]) || 0;
+          if (bidA === 0 && bidB > 0) return 1;
+          if (bidB === 0 && bidA > 0) return -1;
+          return bidA - bidB;
+        });
+      } else {
+        queueList.sort((a, b) => a.order - b.order);
+      }
+
+      // Main matrix rows
+      teams.forEach((t, i) => {
+        const isActive = String(t.id) === String(s.activeTeamId);
+        if (isActive) {
+          document.getElementById('activeImg').src     = t.img || 'https://via.placeholder.com/600x400?text=NO+IMAGE';
+          document.getElementById('activeName').innerText = t.name;
+
+          // Bid display for active team
+          const myBid = t.bids['r' + s.currentRound];
+          document.getElementById('valBid').innerText =
+            myBid === 'LOCKED' ? 'LOCKED' : (myBid ? nf(myBid) : '-');
+
+          // Target efficiency
+          if (t.strucWeight > 0 && lastLoad > 0 && s.currentCallWeight !== 'READY') {
+            const eff = (t.score + lastLoad) / t.strucWeight;
+            document.getElementById('targetEff').style.opacity = 1;
+            document.getElementById('targetEff').innerText = 'TARGET EFF: ' + eff.toFixed(2);
+          } else {
+            document.getElementById('targetEff').style.opacity = 0;
+          }
+        }
+
+        const rowClass = isActive ? 'active-row' : '';
+        html += `<tr class="${rowClass}">
+          <td style="color:#64748b;">${i + 1}</td>
+          <td>${t.name}</td>
+          <td class="digital">${nf(t.strucWeight)}</td>`;
+
+        for (let r = 1; r <= 5; r++) {
+          const val          = parseFloat(t.rounds[r - 1]);
+          const bid          = t.bids['r' + r];
+          const isRoundActive = (r === currentR);
+          let cellContent    = '-';
+
+          if (!isNaN(val)) {
+            cellContent = `<span class="${val > 0 ? 'res-pass' : 'res-fail'}">${nf(Math.abs(val))}</span>`;
+          } else if (t.status !== 'Eliminated') {
+            if (bid === 'LOCKED') {
+              cellContent = '<div class="bid-done"><i class="fas fa-key"></i></div>';
+            } else if (bid) {
+              cellContent = `<span class="res-bid digital">${nf(bid)}</span>`;
+            } else if (isRoundActive && currentR >= 2) {
+              cellContent = '<i class="fas fa-key bid-waiting"></i>';
+            }
+          }
+
+          const bgStyle = isRoundActive ? 'class="col-highlight"' : '';
+          html += `<td ${bgStyle}>${cellContent}</td>`;
+        }
+
+        html += `<td class="digital" style="color:var(--accent-blue); font-weight:bold;">${nf(t.efficiency, 2)}</td>
+                 <td class="digital" style="color:var(--accent-gold);">${nf(t.score)}</td></tr>`;
+      });
+
+      // Queue overlay content
+      queueList.forEach((t, i) => {
+        const bidVal = t.bids['r' + s.currentRound];
+        let displayBid = '-';
+        if (currentR >= 2) {
+          displayBid = (s.bidsRevealed === 'true' && bidVal !== 'LOCKED')
+            ? nf(bidVal) + ' g'
+            : '<i class="fas fa-lock"></i>';
+        } else {
+          displayBid = 'Free Wt';
+        }
+        qHtml += `<div class="q-item">
+          <span style="font-weight:bold;">${i + 1}. ${t.name}</span>
+          <span class="q-bid-box">${displayBid}</span>
+        </div>`;
+      });
+
+      document.getElementById('matrixBody').innerHTML   = html;
+      document.getElementById('queueContent').innerHTML = qHtml;
+    }
+
+    // ── Animate Number ────────────────────────────────────────────────────────
+    function animateValue(id, start, end, duration) {
+      if (start === end) return;
+      const range     = end - start;
+      let current     = start;
+      const increment = end > start ? Math.ceil(range / 20) : Math.floor(range / 20);
+      const obj       = document.getElementById(id);
+      const timer     = setInterval(() => {
+        current += increment;
+        if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+          current = end; clearInterval(timer);
+        }
+        obj.innerText = nf(current);
+      }, 30);
+    }
+
+    // ── Result Popup ──────────────────────────────────────────────────────────
+    function showResult(txt, val) {
+      const ov     = document.getElementById('resOverlay');
+      const t      = document.getElementById('resTxt');
+      const isPass = txt && txt.includes('PASS');
+      t.innerText       = isPass ? 'PASSED' : 'FAILED';
+      t.style.color     = isPass ? 'var(--accent-green)' : 'var(--accent-red)';
+      document.getElementById('resSub').innerText = nf(val) + ' g';
+      ov.classList.add('show');
+      if (isPass) confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+      setTimeout(() => ov.classList.remove('show'), 6000);
+    }
+
+    // ── Timer Loop ────────────────────────────────────────────────────────────
+    function timerLoop() {
+      if (state.timerStatus === 'RUNNING') {
+        const rem = Math.max(0, Math.ceil((state.timerEnd - Date.now()) / 1000));
+        document.getElementById('timerDisp').innerText =
+          String(Math.floor(rem / 60)).padStart(2, '0') + ':' + String(rem % 60).padStart(2, '0');
+      } else {
+        const d = state.timerDuration || 0;
+        document.getElementById('timerDisp').innerText =
+          String(Math.floor(d / 60)).padStart(2, '0') + ':' + String(d % 60).padStart(2, '0');
+      }
+      requestAnimationFrame(timerLoop);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
